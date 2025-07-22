@@ -4,43 +4,44 @@
 #include <stdlib.h>
 #include <time.h>
 
-// Constantes do jogo
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 #define GRAVITY 980.0f
-#define JUMP_FORCE -400.0f
+#define JUMP_FORCE -450.0f
 #define PLAYER_SPEED 200.0f
-#define MAX_PLATFORMS 20
-#define PLATFORM_MIN_GAP 50   // Reduzido de 80
-#define PLATFORM_MAX_GAP 100  // Reduzido de 125
-#define MAX_HORIZONTAL_GAP 160 // Nova constante
+#define MAX_PLATFORMS 22
+#define PLATFORM_MIN_GAP 50
+#define PLATFORM_MAX_GAP 100
+#define MAX_HORIZONTAL_GAP 160
 #define PLAYER_HITBOX_WIDTH 32
 #define PLAYER_HITBOX_HEIGHT 32
 #define MAX_FALL_SPEED 800.0f
 
-// Estados do jogo
-typedef enum {
+#define PLATFORM_HEIGHT 32.0f
+
+typedef enum
+{
     MENU,
     PLAYING,
     GAME_OVER
 } GameState;
 
-// Estados do jogador
-typedef enum {
+typedef enum
+{
     IDLE,
     WALKING,
     JUMPING
 } PlayerState;
 
-// Tipos de plataforma
-typedef enum {
+typedef enum
+{
     PLATFORM_TYPE_1,
     PLATFORM_TYPE_2,
     PLATFORM_TYPE_3
 } PlatformType;
 
-// Estrutura para animações
-typedef struct {
+typedef struct
+{
     Texture2D texture;
     int frames;
     int currentFrame;
@@ -50,42 +51,40 @@ typedef struct {
     float frameHeight;
 } Animation;
 
-// Estrutura do jogador
-typedef struct {
+typedef struct
+{
     Vector2 position;
     Vector2 velocity;
     Rectangle hitbox;
-    Rectangle previousHitbox; // Hitbox do frame anterior
+    Rectangle previousHitbox;
     PlayerState state;
     PlayerState prevState;
     bool facingRight;
     bool onGround;
     int currentPlatform;
+    int platformsHit;
 
-    // Animações
     Animation idleAnim;
     Animation walkAnim;
     Animation jumpAnim;
 } Player;
 
-// Estrutura das plataformas
-typedef struct {
+typedef struct
+{
     Rectangle rect;
     PlatformType type;
     bool active;
 } Platform;
 
-// Variáveis globais
 GameState gameState = MENU;
 Player player;
 Platform platforms[MAX_PLATFORMS];
 Camera2D camera = {0};
-float score = 0.0f;
-float highScore = 0.0f;
+int score = 0;
+int highScore = 0;
 float gameSpeed = 1.0f;
 float startYPosition = 0;
 
-// Texturas
 Texture2D menuBackgroundTexture;
 Texture2D startButtonTexture;
 Texture2D gameBackgroundTexture;
@@ -93,13 +92,14 @@ Texture2D platform1Texture;
 Texture2D platform2Texture;
 Texture2D platform3Texture;
 Texture2D platformTextures[3];
+Texture2D gameOverTexture;
 
-// Declarações de funções
+
 bool LoadGameAssets();
 void UnloadGameAssets();
 void InitPlayer();
 void InitPlatforms();
-void GeneratePlatform(float refX, float refY); // Alterado para receber referência x e y
+void GeneratePlatform(float refX, float refY);
 void UpdatePlayer();
 void UpdateGameCamera();
 void UpdatePlatforms();
@@ -112,73 +112,81 @@ void DrawGameOver();
 void DrawHUD();
 void UpdateAnimation(Animation *anim, float deltaTime, bool reset);
 
-// Função para carregar texturas
-bool LoadGameAssets() {
-    // Menu assets
+
+bool LoadGameAssets()
+{
     menuBackgroundTexture = LoadTexture("assets/titleScreen/background.png");
     startButtonTexture = LoadTexture("assets/titleScreen/start_button.png");
-
-    // Gameplay assets
     gameBackgroundTexture = LoadTexture("assets/gameplay/background.png");
     platform1Texture = LoadTexture("assets/gameplay/plataforma1.png");
     platform2Texture = LoadTexture("assets/gameplay/plataforma2.png");
     platform3Texture = LoadTexture("assets/gameplay/plataforma3.png");
-
-    // Player assets
     player.idleAnim.texture = LoadTexture("assets/player/player_Idle.png");
     player.walkAnim.texture = LoadTexture("assets/player/player_walk.png");
     player.jumpAnim.texture = LoadTexture("assets/player/player_Jump.png");
+    gameOverTexture = LoadTexture("assets/gameplay/dead.png");
 
-    // Configurar array de plataformas
     platformTextures[PLATFORM_TYPE_1] = platform1Texture;
     platformTextures[PLATFORM_TYPE_2] = platform2Texture;
     platformTextures[PLATFORM_TYPE_3] = platform3Texture;
 
-    // Verificar se as texturas foram carregadas
     bool allLoaded = true;
-
-    if (menuBackgroundTexture.id == 0) {
+    if (menuBackgroundTexture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/titleScreen/background.png nao carregado");
         allLoaded = false;
     }
-    if (startButtonTexture.id == 0) {
+    if (startButtonTexture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/titleScreen/start_button.png nao carregado");
         allLoaded = false;
     }
-    if (gameBackgroundTexture.id == 0) {
+    if (gameBackgroundTexture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/gameplay/background.png nao carregado");
         allLoaded = false;
     }
-    if (platform1Texture.id == 0) {
+    if (platform1Texture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/gameplay/plataforma1.png nao carregado");
         allLoaded = false;
     }
-    if (platform2Texture.id == 0) {
+    if (platform2Texture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/gameplay/plataforma2.png nao carregado");
         allLoaded = false;
     }
-    if (platform3Texture.id == 0) {
+    if (platform3Texture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/gameplay/plataforma3.png nao carregado");
         allLoaded = false;
     }
-    if (player.idleAnim.texture.id == 0) {
+    if (player.idleAnim.texture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/player/player_Idle.png nao carregado");
         allLoaded = false;
     }
-    if (player.walkAnim.texture.id == 0) {
+    if (player.walkAnim.texture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/player/player_walk.png nao carregado");
         allLoaded = false;
     }
-    if (player.jumpAnim.texture.id == 0) {
+    if (player.jumpAnim.texture.id == 0)
+    {
         TraceLog(LOG_WARNING, "AVISO: assets/player/player_Jump.png nao carregado");
+        allLoaded = false;
+    }
+    if (gameOverTexture.id == 0)
+    {
+        TraceLog(LOG_WARNING, "AVISO: assets/gameplay/dead.png nao carregado");
         allLoaded = false;
     }
 
     return allLoaded;
 }
 
-// Função para descarregar texturas
-void UnloadGameAssets() {
+void UnloadGameAssets()
+{
     UnloadTexture(menuBackgroundTexture);
     UnloadTexture(startButtonTexture);
     UnloadTexture(gameBackgroundTexture);
@@ -188,28 +196,34 @@ void UnloadGameAssets() {
     UnloadTexture(player.idleAnim.texture);
     UnloadTexture(player.walkAnim.texture);
     UnloadTexture(player.jumpAnim.texture);
+    UnloadTexture(gameOverTexture);
 }
 
-// Inicializar jogador
-void InitPlayer() {
-    player.position = (Vector2){SCREEN_WIDTH / 2, SCREEN_HEIGHT - 150};
-    player.velocity = (Vector2){0, 0};
-    
-    player.hitbox = (Rectangle){
-        player.position.x - PLAYER_HITBOX_WIDTH / 2,
-        player.position.y - PLAYER_HITBOX_HEIGHT,
-        PLAYER_HITBOX_WIDTH,
-        PLAYER_HITBOX_HEIGHT
-    };
-    player.previousHitbox = player.hitbox; // Inicializar previousHitbox
 
+void InitPlayer()
+{
+    
+    Platform initialPlatform = platforms[0];
+
+    player.position = (Vector2){
+        initialPlatform.rect.x + initialPlatform.rect.width / 2.0f,
+        initialPlatform.rect.y - 2.0f
+    };
+
+    player.velocity = (Vector2){0, 0};
+    player.hitbox = (Rectangle){
+        player.position.x - PLAYER_HITBOX_WIDTH / 2.0f, // X do topo esquerdo da hitbox
+        player.position.y - PLAYER_HITBOX_HEIGHT,       // Y do topo esquerdo da hitbox
+        PLAYER_HITBOX_WIDTH,
+        PLAYER_HITBOX_HEIGHT};
+
+    player.previousHitbox = player.hitbox;
     player.state = IDLE;
     player.prevState = IDLE;
     player.facingRight = true;
-    player.onGround = true;
+    player.onGround = true; 
     player.currentPlatform = 0;
 
-    // Configurar animação IDLE
     player.idleAnim.frames = 5;
     player.idleAnim.frameTime = 0.15f;
     player.idleAnim.currentFrame = 0;
@@ -217,7 +231,6 @@ void InitPlayer() {
     player.idleAnim.frameWidth = player.idleAnim.texture.width / player.idleAnim.frames;
     player.idleAnim.frameHeight = player.idleAnim.texture.height;
 
-    // Configurar animação WALK
     player.walkAnim.frames = 8;
     player.walkAnim.frameTime = 0.1f;
     player.walkAnim.currentFrame = 0;
@@ -225,7 +238,6 @@ void InitPlayer() {
     player.walkAnim.frameWidth = player.walkAnim.texture.width / player.walkAnim.frames;
     player.walkAnim.frameHeight = player.walkAnim.texture.height;
 
-    // Configurar animação JUMP
     player.jumpAnim.frames = 8;
     player.jumpAnim.frameTime = 0.1f;
     player.jumpAnim.currentFrame = 0;
@@ -233,370 +245,429 @@ void InitPlayer() {
     player.jumpAnim.frameWidth = player.jumpAnim.texture.width / player.jumpAnim.frames;
     player.jumpAnim.frameHeight = player.jumpAnim.texture.height;
 
-    startYPosition = player.position.y;
+    player.platformsHit = 0;
+    score = 0;
+    startYPosition = player.position.y - PLAYER_HITBOX_HEIGHT; 
 }
 
-// Inicializar plataformas
-void InitPlatforms() {
-    for (int i = 0; i < MAX_PLATFORMS; i++) {
+void InitPlatforms()
+{
+    for (int i = 0; i < MAX_PLATFORMS; i++)
+    {
         platforms[i].active = false;
     }
 
-    // Plataforma inicial
     platforms[0] = (Platform){
         .rect = {
-            SCREEN_WIDTH / 2 - 100,
-            SCREEN_HEIGHT - 50,
+            SCREEN_WIDTH / 2.0f - 100,
+            SCREEN_HEIGHT - 100, 
             200,
-            32
+            PLATFORM_HEIGHT
         },
         .type = PLATFORM_TYPE_1,
-        .active = true
-    };
+        .active = true};
 
-    // Gerar plataformas iniciais com distâncias controladas
-    float lastX = SCREEN_WIDTH / 2; // Centro da plataforma inicial
-    float lastY = SCREEN_HEIGHT - 50;
     
-    for (int i = 1; i < 8; i++) {
+    float lastY = SCREEN_HEIGHT - 100; 
+    float lastX = SCREEN_WIDTH / 2.0f; 
+    for (int i = 1; i < 8; i++)
+    {
         int gap = GetRandomValue(PLATFORM_MIN_GAP, PLATFORM_MAX_GAP);
         lastY -= gap;
-        
-        // Nova posição baseada na anterior com limite horizontal
+
         int offsetX = GetRandomValue(-MAX_HORIZONTAL_GAP, MAX_HORIZONTAL_GAP);
         lastX += offsetX;
-        
-        // Garantir que não sai da tela
-        if (lastX < 100) lastX = 100;
-        else if (lastX > SCREEN_WIDTH - 100) lastX = SCREEN_WIDTH - 100;
-        
+
+        if (lastX < 50)
+            lastX = 50;
+        else if (lastX > SCREEN_WIDTH - 50)
+            lastX = SCREEN_WIDTH - 50;
+
         float width = GetRandomValue(80, 180);
-        
+
         platforms[i] = (Platform){
-            .rect = {
-                lastX - width/2, // Centralizado
-                lastY,
-                width,
-                32
-            },
+            .rect = {lastX - width / 2.0f, lastY, width, PLATFORM_HEIGHT},
             .type = (PlatformType)GetRandomValue(0, 2),
-            .active = true
-        };
+            .active = true};
     }
 }
 
-// Gerar nova plataforma baseada na plataforma anterior
-void GeneratePlatform(float refX, float refY) {
-    for (int i = 0; i < MAX_PLATFORMS; i++) {
-        if (!platforms[i].active) {
+void GeneratePlatform(float refX, float refY)
+{
+    for (int i = 0; i < MAX_PLATFORMS; i++)
+    {
+        if (!platforms[i].active)
+        {
             int gap = GetRandomValue(PLATFORM_MIN_GAP, PLATFORM_MAX_GAP);
             float newY = refY - gap;
-            
-            // Distância horizontal limitada (máx 160 pixels)
+
             int offsetX = GetRandomValue(-MAX_HORIZONTAL_GAP, MAX_HORIZONTAL_GAP);
             float newX = refX + offsetX;
-            
-            // Garantir que não sai dos limites da tela
-            if (newX < 50) newX = 50;
-            else if (newX > SCREEN_WIDTH - 50) newX = SCREEN_WIDTH - 50;
-            
+
+            if (newX < 50)
+                newX = 50;
+            else if (newX > SCREEN_WIDTH - 50)
+                newX = SCREEN_WIDTH - 50;
+
             float width = GetRandomValue(80, 180);
-            
+
             platforms[i] = (Platform){
-                .rect = {
-                    newX - width/2, // Centralizado no ponto X
-                    newY,
-                    width,
-                    32
-                },
+                .rect = {newX - width / 2.0f, newY, width, PLATFORM_HEIGHT},
                 .type = (PlatformType)GetRandomValue(0, 2),
-                .active = true
-            };
+                .active = true};
             return;
         }
     }
 }
 
-// Atualizar animação
-void UpdateAnimation(Animation *anim, float deltaTime, bool reset) {
-    if (reset) {
+void UpdateAnimation(Animation *anim, float deltaTime, bool reset)
+{
+    if (reset)
+    {
         anim->currentFrame = 0;
         anim->elapsedTime = 0.0f;
         return;
     }
-
     anim->elapsedTime += deltaTime;
-    if (anim->elapsedTime >= anim->frameTime) {
+    if (anim->elapsedTime >= anim->frameTime)
+    {
         anim->currentFrame = (anim->currentFrame + 1) % anim->frames;
         anim->elapsedTime = 0.0f;
     }
 }
 
-// Atualizar jogador - COLISÃO CORRIGIDA
-void UpdatePlayer() {
-    // Salvar hitbox anterior
-    player.previousHitbox = player.hitbox;
 
+void UpdatePlayer()
+{
+    player.previousHitbox = player.hitbox;
     player.prevState = player.state;
 
-    // Input horizontal
     bool moving = false;
-    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) {
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))
+    {
         player.velocity.x = -PLAYER_SPEED * gameSpeed;
         player.facingRight = false;
         moving = true;
     }
-    else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) {
+    else if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))
+    {
         player.velocity.x = PLAYER_SPEED * gameSpeed;
         player.facingRight = true;
         moving = true;
     }
-    else {
+    else
+    {
         player.velocity.x = 0;
     }
 
-    // Determinar estado
-    if (!player.onGround) {
-        player.state = JUMPING;
-    }
-    else if (moving) {
-        player.state = WALKING;
-    }
-    else {
-        player.state = IDLE;
-    }
 
-    // Pulo
-    if ((IsKeyPressed(KEY_SPACE) && player.onGround)) {
+    if (IsKeyPressed(KEY_SPACE) && player.onGround)
+    {
         player.velocity.y = JUMP_FORCE;
         player.onGround = false;
         player.state = JUMPING;
-        platforms[player.currentPlatform].active = false;
-        
-        // Gerar nova plataforma baseada na posição da plataforma atual
-        Platform* current = &platforms[player.currentPlatform];
-        float refX = current->rect.x + current->rect.width/2; // Centro da plataforma
+
+        Platform *current = &platforms[player.currentPlatform];
+        float refX = current->rect.x + current->rect.width / 2.0f;
         float refY = current->rect.y;
         GeneratePlatform(refX, refY);
     }
 
-    // Aplicar gravidade
+
     player.velocity.y += GRAVITY * GetFrameTime() * gameSpeed;
-    
-    // Limitar velocidade de queda
-    if (player.velocity.y > MAX_FALL_SPEED) {
+
+
+    if (player.velocity.y > MAX_FALL_SPEED)
+    {
         player.velocity.y = MAX_FALL_SPEED;
     }
 
-    // Atualizar posição
+
     player.position.x += player.velocity.x * GetFrameTime();
     player.position.y += player.velocity.y * GetFrameTime();
 
-    // Atualizar hitbox
-    player.hitbox.x = player.position.x - PLAYER_HITBOX_WIDTH / 2;
+    player.hitbox.x = player.position.x - PLAYER_HITBOX_WIDTH / 2.0f;
     player.hitbox.y = player.position.y - PLAYER_HITBOX_HEIGHT;
 
-    // Verificar colisões com plataformas - SISTEMA CORRIGIDO
-    player.onGround = false;
-    for (int i = 0; i < MAX_PLATFORMS; i++) {
-        if (!platforms[i].active) continue;
+   
+    player.onGround = false; // Assume que não está no chão até que uma colisão seja detectada
 
-        if (player.velocity.y >= 0) {
-            // Calcular limites
-            float previousBottom = player.previousHitbox.y + player.previousHitbox.height;
-            float currentBottom = player.hitbox.y + player.hitbox.height;
-            float platformTop = platforms[i].rect.y;
-            
-            // Verificar se o jogador atravessou a plataforma
-            if (previousBottom <= platformTop && currentBottom >= platformTop) {
-                // Verificar sobreposição horizontal
-                if (player.hitbox.x + player.hitbox.width > platforms[i].rect.x &&
-                    player.hitbox.x < platforms[i].rect.x + platforms[i].rect.width) {
-                    
-                    // CORREÇÃO: Posicionar base do jogador no topo da plataforma
-                    player.position.y = platformTop;
-                    
-                    // Atualizar hitbox imediatamente
-                    player.hitbox.y = player.position.y - PLAYER_HITBOX_HEIGHT;
-                    
+    if (player.velocity.y >= 0)
+    {
+        for (int i = 0; i < MAX_PLATFORMS; i++)
+        {
+            if (!platforms[i].active)
+                continue;
+
+
+            Rectangle playerFeetArea = {
+                player.hitbox.x,
+                player.hitbox.y + player.hitbox.height - 10, // 10 pixels acima da base
+                player.hitbox.width,
+                15 // Altura: 10 pixels acima e 5 abaixo
+            };
+
+            // Verifica se a área dos pés colide com a plataforma
+            if (CheckCollisionRecs(playerFeetArea, platforms[i].rect))
+            {
+                // Verifica se o jogador estava acima da plataforma no frame anterior
+                if (player.previousHitbox.y + player.previousHitbox.height <= platforms[i].rect.y + 1.0f) // +1.0f de tolerância
+                {
+                    // Ajusta a posição Y do jogador (base central) para o topo da plataforma
+                    player.position.y = platforms[i].rect.y;
                     player.velocity.y = 0;
                     player.onGround = true;
                     player.currentPlatform = i;
-                    break;
+                    break; // Colidiu com uma plataforma, pode parar de verificar
                 }
             }
         }
     }
 
-    // Atualizar animação
-    bool resetAnimation = (player.prevState != player.state);
+    if (!player.onGround)
+    {
+        player.state = JUMPING;
+    }
+    else if (moving)
+    {
+        player.state = WALKING;
+    }
+    else
+    {
+        player.state = IDLE;
+    }
 
-    switch (player.state) {
-        case IDLE:
-            UpdateAnimation(&player.idleAnim, GetFrameTime() * gameSpeed, resetAnimation);
-            break;
-        case WALKING:
-            UpdateAnimation(&player.walkAnim, GetFrameTime() * gameSpeed, resetAnimation);
-            break;
-        case JUMPING:
-            UpdateAnimation(&player.jumpAnim, GetFrameTime() * gameSpeed, resetAnimation);
-            break;
+ 
+    bool resetAnimation = (player.prevState != player.state);
+    switch (player.state)
+    {
+    case IDLE:
+        UpdateAnimation(&player.idleAnim, GetFrameTime() * gameSpeed, resetAnimation);
+        break;
+    case WALKING:
+        UpdateAnimation(&player.walkAnim, GetFrameTime() * gameSpeed, resetAnimation);
+        break;
+    case JUMPING:
+        UpdateAnimation(&player.jumpAnim, GetFrameTime() * gameSpeed, resetAnimation);
+        break;
     }
 
     // Atualizar pontuação
-    float heightDifference = startYPosition - player.position.y;
-    if (heightDifference > score) {
-        score = heightDifference;
+    float heightDifference = startYPosition - (player.hitbox.y); // Usar topo da hitbox
+    if (heightDifference > score)
+    {
+        score = (int)heightDifference;
     }
 
-    // Aumentar velocidade do jogo
     gameSpeed = 1.0f + (score * 0.0005f);
-    if (gameSpeed > 2.5f) gameSpeed = 2.5f;
+    if (gameSpeed > 2.5f)
+        gameSpeed = 2.5f;
 }
 
 // Atualizar câmera
-void UpdateGameCamera() {
+void UpdateGameCamera()
+{
+    // A câmera segue o ponto central superior do jogador (ou um pouco acima dele)
     camera.target.x = player.position.x;
-    camera.target.y = player.position.y - SCREEN_HEIGHT / 3;
+    camera.target.y = player.position.y - SCREEN_HEIGHT / 3.0f; // Ajuste para manter o jogador na parte inferior da tela
 
-    // Limitar movimento vertical
-    if (camera.target.y < SCREEN_HEIGHT / 2) {
-        camera.target.y = SCREEN_HEIGHT / 2;
+    // Garante que a câmera não desça abaixo do ponto de início do jogo
+    // (startYPosition é a base do jogador na primeira plataforma)
+    if (camera.target.y > startYPosition - SCREEN_HEIGHT / 2.0f + 50)
+    {
+        camera.target.y = startYPosition - SCREEN_HEIGHT / 2.0f + 50;
     }
 
-    camera.offset = (Vector2){SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+    camera.offset = (Vector2){SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f};
 }
 
 // Atualizar plataformas
-void UpdatePlatforms() {
+void UpdatePlatforms()
+{
     // Remover plataformas abaixo da tela
-    float bottomLimit = camera.target.y + SCREEN_HEIGHT + 100;
-    for (int i = 0; i < MAX_PLATFORMS; i++) {
-        if (platforms[i].active && platforms[i].rect.y > bottomLimit) {
+    float bottomLimit = camera.target.y + SCREEN_HEIGHT / 2.0f + 100;
+    for (int i = 0; i < MAX_PLATFORMS; i++)
+    {
+        if (platforms[i].active && platforms[i].rect.y > bottomLimit)
+        {
             platforms[i].active = false;
         }
     }
 
     // Gerar novas plataformas
-    float highestY = camera.target.y - SCREEN_HEIGHT;
-    bool needPlatforms = true;
-
-    while (needPlatforms) {
-        needPlatforms = false;
-        float lowestPlatform = camera.target.y + SCREEN_HEIGHT;
-
-        for (int i = 0; i < MAX_PLATFORMS; i++) {
-            if (platforms[i].active && platforms[i].rect.y < lowestPlatform) {
-                lowestPlatform = platforms[i].rect.y;
+    float highestActivePlatformY = -INFINITY;
+    for (int i = 0; i < MAX_PLATFORMS; i++)
+    {
+        if (platforms[i].active)
+        {
+            if (platforms[i].rect.y < highestActivePlatformY || highestActivePlatformY == -INFINITY)
+            {
+                highestActivePlatformY = platforms[i].rect.y;
             }
         }
+    }
 
-        if (lowestPlatform > highestY) {
-            // Para geração acima, usamos a plataforma mais baixa como referência
-            // Mas precisamos de uma posição de referência (x) para a geração
-            // Vamos usar a posição x do jogador
-            GeneratePlatform(player.position.x, lowestPlatform);
-            needPlatforms = true;
+    if (highestActivePlatformY == -INFINITY || highestActivePlatformY > camera.target.y - SCREEN_HEIGHT / 2.0f + 150)
+    {
+        float refX = SCREEN_WIDTH / 2.0f;
+        if (highestActivePlatformY != -INFINITY)
+        {
+            for (int i = 0; i < MAX_PLATFORMS; i++)
+            {
+                if (platforms[i].active && platforms[i].rect.y == highestActivePlatformY)
+                {
+                    refX = platforms[i].rect.x + platforms[i].rect.width / 2.0f;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            highestActivePlatformY = camera.target.y - SCREEN_HEIGHT / 2.0f;
+        }
+
+        for (int j = 0; j < 5; j++)
+        {
+            GeneratePlatform(refX, highestActivePlatformY - (j * (PLATFORM_MAX_GAP + PLATFORM_HEIGHT)));
         }
     }
 }
 
 // Verificar game over
-void CheckGameOver() {
-    if (player.position.y > camera.target.y + SCREEN_HEIGHT + 100) {
+void CheckGameOver()
+{
+    // O jogador caiu abaixo da tela visível da câmera (considerando o offset da câmera)
+    // A player.position.y agora é a BASE do jogador.
+    // Então, se a base do jogador for maior que a base da câmera + um offset, é game over.
+    if (player.position.y > camera.target.y + (SCREEN_HEIGHT / 2.0f) + 50)
+    {
         gameState = GAME_OVER;
-        if (score > highScore) highScore = score;
+        if (score > highScore)
+            highScore = score;
     }
 }
 
 // Desenhar background em paralaxe
-void DrawParallaxBackground(Texture2D texture, float parallaxFactor) {
-    if (texture.id == 0) return;
+void DrawParallaxBackground(Texture2D texture, float parallaxFactor)
+{
+    if (texture.id == 0)
+        return;
 
-    Vector2 pos = {
-        camera.target.x - texture.width / 2,
-        (camera.target.y * parallaxFactor) - texture.height / 2
-    };
+    // Calcula a posição Y do topo da viewport da câmera no mundo do jogo
+    float cameraTopY = camera.target.y - SCREEN_HEIGHT / 2.0f;
 
-    // Desenhar textura repetida
-    int startX = (int)(pos.x / texture.width) - 1;
-    int endX = startX + SCREEN_WIDTH / texture.width + 2;
+    // Aplica o fator de paralaxe a essa posição para obter a posição Y do fundo
+    // O fundo se move na mesma direção que a câmera, mas mais lentamente
+    float bgY_unwrapped = cameraTopY * parallaxFactor;
 
-    int startY = (int)(pos.y / texture.height) - 1;
-    int endY = startY + SCREEN_HEIGHT / texture.height + 2;
+    // Usa fmod para fazer o fundo se repetir verticalmente
+    // O sinal negativo garante que o deslocamento é para cima quando a câmera sobe
+    float offsetY = fmod(-bgY_unwrapped, texture.height);
+    // Ajusta para que offsetY seja sempre positivo e no intervalo [0, texture.height)
+    if (offsetY > 0) offsetY -= texture.height;
 
-    for (int y = startY; y < endY; y++) {
-        for (int x = startX; x < endX; x++) {
-            DrawTexture(texture, x * texture.width, y * texture.height, WHITE);
+
+    // Desenha o fundo. Precisamos desenhar pelo menos 2 cópias verticalmente
+    // para garantir que a tela esteja sempre coberta e a repetição seja suave.
+    // O loop começa de uma posição 'y' que garante que a parte de cima da tela seja coberta
+    // e vai até a parte de baixo.
+    for (int y = (int)(offsetY - texture.height); y < SCREEN_HEIGHT; y += texture.height)
+    {
+        // Para o movimento horizontal, usamos a mesma lógica de paralaxe
+        float bgX_unwrapped = camera.target.x * parallaxFactor;
+        float offsetX = fmod(-bgX_unwrapped, texture.width);
+        if (offsetX > 0) offsetX -= texture.width;
+
+        for (int x = (int)(offsetX - texture.width); x < SCREEN_WIDTH; x += texture.width)
+        {
+            DrawTexture(texture, x, y, WHITE);
+            // Opcional: Desenhe uma borda para depuração para ver onde as texturas estão sendo desenhadas
+            // DrawRectangleLines(x, y, texture.width, texture.height, RED);
         }
     }
 }
 
+
 // Desenhar jogador com animação
-void DrawPlayer() {
+void DrawPlayer()
+{
     Animation *currentAnim = NULL;
 
-    switch (player.state) {
-        case IDLE:
-            currentAnim = &player.idleAnim;
-            break;
-        case WALKING:
-            currentAnim = &player.walkAnim;
-            break;
-        case JUMPING:
-            currentAnim = &player.jumpAnim;
-            break;
+    switch (player.state)
+    {
+    case IDLE:
+        currentAnim = &player.idleAnim;
+        break;
+    case WALKING:
+        currentAnim = &player.walkAnim;
+        break;
+    case JUMPING:
+        currentAnim = &player.jumpAnim;
+        break;
     }
 
-    if (currentAnim->texture.id == 0) {
-        DrawRectangleRec(player.hitbox, 
-                        player.state == JUMPING ? RED : 
-                        player.state == WALKING ? BLUE : GREEN);
+    if (currentAnim->texture.id == 0)
+    {
+        DrawRectangleRec(player.hitbox,
+                         player.state == JUMPING ? RED : player.state == WALKING ? BLUE
+                                                                                : GREEN);
         return;
     }
 
-    // Definir retângulo de origem
     Rectangle src;
     src.y = 0.0f;
     src.height = (float)currentAnim->frameHeight;
 
-    if (player.facingRight) {
+    if (player.facingRight)
+    {
         src.x = (float)currentAnim->currentFrame * currentAnim->frameWidth;
         src.width = (float)currentAnim->frameWidth;
-    } else {
+    }
+    else
+    {
         src.x = (float)(currentAnim->currentFrame + 1) * currentAnim->frameWidth;
         src.width = -(float)currentAnim->frameWidth;
     }
 
-    // Ajuste para alinhar visual com hitbox
+    // A textura é desenhada com a origem na parte inferior-central,
+    // o que a alinha perfeitamente com a 'player.position' que representa a BASE CENTRAL do jogador.
     Rectangle dest = {
         player.position.x,
         player.position.y,
         (float)currentAnim->frameWidth,
-        (float)currentAnim->frameHeight
-    };
+        (float)currentAnim->frameHeight};
 
     Vector2 origin = {
         (float)currentAnim->frameWidth / 2.0f,
-        (float)currentAnim->frameHeight
-    };
-    
+        (float)currentAnim->frameHeight};
+
     DrawTexturePro(currentAnim->texture, src, dest, origin, 0.0f, WHITE);
+
+    // Desenha a hitbox para depuração
+    // Isso deve corresponder exatamente à área de colisão
+    // DrawRectangleLinesEx(player.hitbox, 1, RED);
 }
 
 // Desenhar plataformas com alinhamento correto
-void DrawPlatforms() {
-    for (int i = 0; i < MAX_PLATFORMS; i++) {
-        if (!platforms[i].active) continue;
+void DrawPlatforms()
+{
+    for (int i = 0; i < MAX_PLATFORMS; i++)
+    {
+        if (!platforms[i].active)
+            continue;
 
-        if (platformTextures[platforms[i].type].id != 0) {
-            DrawTextureRec(
+        if (platformTextures[platforms[i].type].id != 0)
+        {
+            DrawTexturePro(
                 platformTextures[platforms[i].type],
-                (Rectangle){0, 0, platforms[i].rect.width, platforms[i].rect.height},
-                (Vector2){platforms[i].rect.x, platforms[i].rect.y},
-                WHITE
-            );
-        } else {
+                (Rectangle){0, 0, (float)platformTextures[platforms[i].type].width, (float)platformTextures[platforms[i].type].height},
+                platforms[i].rect,
+                (Vector2){0, 0},
+                0.0f,
+                WHITE);
+        }
+        else
+        {
             Color colors[] = {BROWN, DARKBROWN, BEIGE};
             DrawRectangleRec(platforms[i].rect, colors[platforms[i].type]);
         }
@@ -604,141 +675,154 @@ void DrawPlatforms() {
 }
 
 // Desenhar menu
-void DrawMenu() {
-    // Background
-    if (menuBackgroundTexture.id != 0) {
+void DrawMenu()
+{
+    if (menuBackgroundTexture.id != 0)
+    {
         DrawTexture(menuBackgroundTexture, 0, 0, WHITE);
-    } else {
+    }
+    else
+    {
         ClearBackground(DARKBLUE);
         DrawText("ENDLESS JUMPING", SCREEN_WIDTH / 2 - 180, 150, 40, WHITE);
     }
 
-    // Botão de start
-    Rectangle btnRect = {SCREEN_WIDTH / 2 - 128, SCREEN_HEIGHT / 2, 256, 128};
+    Rectangle btnRect = {SCREEN_WIDTH / 2.0f - 128, SCREEN_HEIGHT / 2.0f, 256, 128};
 
-    if (startButtonTexture.id != 0) {
+    if (startButtonTexture.id != 0)
+    {
         DrawTexture(startButtonTexture, btnRect.x, btnRect.y, WHITE);
-    } else {
+    }
+    else
+    {
         DrawRectangleRec(btnRect, GREEN);
         DrawText("PLAY", SCREEN_WIDTH / 2 - 40, SCREEN_HEIGHT / 2 + 40, 40, WHITE);
     }
 
-    // Verificar clique
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) || IsKeyPressed(KEY_ENTER))
+    {
         Vector2 mousePos = GetMousePosition();
-        if (CheckCollisionPointRec(mousePos, btnRect)) {
+        if (CheckCollisionPointRec(mousePos, btnRect))
+        {
             gameState = PLAYING;
-            InitPlayer();
+            // É crucial que InitPlatforms seja chamada ANTES de InitPlayer
+            // para que player.position possa se basear na primeira plataforma.
             InitPlatforms();
-            score = 0.0f;
+            InitPlayer();
+            score = 0;
             gameSpeed = 1.0f;
-            camera.target = (Vector2){0};
         }
     }
 
-    // High Score
-    if (highScore > 0) {
-        DrawText(TextFormat("High Score: %.0f", highScore),
-                 SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT - 100, 20, YELLOW);
+    if (highScore > 0)
+    {
+        DrawText(TextFormat("High Score: %d", highScore),
+                 SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT - 100, 20, BLACK);
     }
 
-    // Instruções
     DrawText("Use A/D para mover e ESPACO para pular",
-             SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT - 50, 20, LIGHTGRAY);
+             SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT - 50, 20, WHITE);
 }
 
 // Desenhar game over
-void DrawGameOver() {
+void DrawGameOver()
+{
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.7f));
 
-    DrawText("GAME OVER", SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 100, 40, RED);
-    DrawText(TextFormat("Score: %.0f", score), SCREEN_WIDTH / 2 - 70, SCREEN_HEIGHT / 2 - 40, 30, WHITE);
-
-    if (highScore > 0) {
-        DrawText(TextFormat("High Score: %.0f", highScore),
-                 SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2, 30, YELLOW);
+    if (gameOverTexture.id != 0)
+    {
+        float scale = 0.7f;
+        Vector2 position = {
+            SCREEN_WIDTH / 2.0f - (gameOverTexture.width * scale) / 2.0f,
+            SCREEN_HEIGHT / 2.0f - (gameOverTexture.height * scale) / 2.0f - 50};
+        DrawTextureEx(gameOverTexture, position, 0.0f, scale, WHITE);
+    }
+    else
+    {
+        DrawText("CAIU E PERDEU!", SCREEN_WIDTH / 2 - 150, SCREEN_HEIGHT / 2 - 80, 40, RED);
     }
 
-    DrawText("Press R to restart or ESC to menu",
-             SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT / 2 + 60, 20, WHITE);
+    DrawText(TextFormat("Plataformas: %d", score), SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 30, WHITE);
 
-    if (IsKeyPressed(KEY_R)) {
-        gameState = PLAYING;
-        InitPlayer();
-        InitPlatforms();
-        score = 0.0f;
-        gameSpeed = 1.0f;
-    } else if (IsKeyPressed(KEY_ESCAPE)) {
-        gameState = MENU;
-        camera.target = (Vector2){0};
+    if (highScore > 0)
+    {
+        DrawText(TextFormat("Recorde: %d", highScore), SCREEN_WIDTH / 2 - 80, SCREEN_HEIGHT / 2 + 20, 30, GOLD);
     }
+
+    DrawText("Pressione ENTER para voltar ao inicio", SCREEN_WIDTH / 2 - 220, SCREEN_HEIGHT - 60, 20, LIGHTGRAY);
 }
 
 // Desenhar HUD
-void DrawHUD() {
-    DrawText(TextFormat("Score: %.0f", score), 10, 10, 20, WHITE);
-    DrawText(TextFormat("Speed: %.1fx", gameSpeed), 10, 35, 16, LIGHTGRAY);
+void DrawHUD()
+{
+    DrawText(TextFormat("Plataformas: %d", score), 10, 10, 20, WHITE);
+    DrawText(TextFormat("Velocidade: %.1fx", gameSpeed), 10, 35, 16, GREEN);
     DrawText("ESC: Menu", SCREEN_WIDTH - 100, 10, 20, LIGHTGRAY);
 }
 
-int main() {
+int main()
+{
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Endless Jumping Game");
     SetTargetFPS(60);
 
-    if (!LoadGameAssets()) {
+    if (!LoadGameAssets())
+    {
         TraceLog(LOG_WARNING, "Alguns assets nao carregados, usando fallbacks");
     }
 
     srand(time(NULL));
-    InitPlayer();
-    InitPlatforms();
     camera.zoom = 1.0f;
 
-    while (!WindowShouldClose()) {
-        // Atualização
-        switch (gameState) {
-            case MENU:
-                break;
-                
-            case PLAYING:
-                UpdatePlayer();
-                UpdateGameCamera();
-                UpdatePlatforms();
-                CheckGameOver();
-                if (IsKeyPressed(KEY_ESCAPE)) gameState = MENU;
-                break;
-                
-            case GAME_OVER:
-                if (IsKeyPressed(KEY_ESCAPE)) gameState = MENU;
-                break;
+    while (!WindowShouldClose())
+    {
+        switch (gameState)
+        {
+        case MENU:
+            break;
+
+        case PLAYING:
+            UpdatePlayer();
+            UpdateGameCamera();
+            UpdatePlatforms();
+            CheckGameOver();
+            if (IsKeyPressed(KEY_ESCAPE))
+                gameState = MENU;
+            break;
+
+        case GAME_OVER:
+            if (IsKeyPressed(KEY_ENTER))
+            {
+                gameState = MENU;
+            }
+            break;
         }
 
-        // Renderização
         BeginDrawing();
         ClearBackground(SKYBLUE);
 
-        switch (gameState) {
-            case MENU:
-                DrawMenu();
-                break;
-                
-            case PLAYING:
-                BeginMode2D(camera);
-                DrawParallaxBackground(gameBackgroundTexture, 0.2f);
-                DrawPlatforms();
-                DrawPlayer();
-                EndMode2D();
-                DrawHUD();
-                break;
-                
-            case GAME_OVER:
-                BeginMode2D(camera);
-                DrawParallaxBackground(gameBackgroundTexture, 0.2f);
-                DrawPlatforms();
-                DrawPlayer();
-                EndMode2D();
-                DrawGameOver();
-                break;
+        switch (gameState)
+        {
+        case MENU:
+            DrawMenu();
+            break;
+
+        case PLAYING:
+            BeginMode2D(camera);
+            DrawParallaxBackground(gameBackgroundTexture, 0.2f); // Fator de paralaxe ajustado para 0.2
+            DrawPlatforms();
+            DrawPlayer();
+            EndMode2D();
+            DrawHUD();
+            break;
+
+        case GAME_OVER:
+            BeginMode2D(camera);
+            DrawParallaxBackground(gameBackgroundTexture, 0.2f); // Fator de paralaxe ajustado para 0.2
+            DrawPlatforms();
+            DrawPlayer();
+            EndMode2D();
+            DrawGameOver();
+            break;
         }
 
         EndDrawing();
