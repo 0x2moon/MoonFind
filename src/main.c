@@ -199,7 +199,6 @@ void UnloadGameAssets()
     UnloadTexture(gameOverTexture);
 }
 
-
 void InitPlayer()
 {
     
@@ -212,8 +211,8 @@ void InitPlayer()
 
     player.velocity = (Vector2){0, 0};
     player.hitbox = (Rectangle){
-        player.position.x - PLAYER_HITBOX_WIDTH / 2.0f, // X do topo esquerdo da hitbox
-        player.position.y - PLAYER_HITBOX_HEIGHT,       // Y do topo esquerdo da hitbox
+        player.position.x - PLAYER_HITBOX_WIDTH / 2.0f, 
+        player.position.y - PLAYER_HITBOX_HEIGHT,
         PLAYER_HITBOX_WIDTH,
         PLAYER_HITBOX_HEIGHT};
 
@@ -390,7 +389,7 @@ void UpdatePlayer()
     player.hitbox.y = player.position.y - PLAYER_HITBOX_HEIGHT;
 
    
-    player.onGround = false; // Assume que não está no chão até que uma colisão seja detectada
+    player.onGround = false;
 
     if (player.velocity.y >= 0)
     {
@@ -402,23 +401,21 @@ void UpdatePlayer()
 
             Rectangle playerFeetArea = {
                 player.hitbox.x,
-                player.hitbox.y + player.hitbox.height - 10, // 10 pixels acima da base
+                player.hitbox.y + player.hitbox.height - 10, 
                 player.hitbox.width,
-                15 // Altura: 10 pixels acima e 5 abaixo
+                15 
             };
 
-            // Verifica se a área dos pés colide com a plataforma
             if (CheckCollisionRecs(playerFeetArea, platforms[i].rect))
             {
-                // Verifica se o jogador estava acima da plataforma no frame anterior
-                if (player.previousHitbox.y + player.previousHitbox.height <= platforms[i].rect.y + 1.0f) // +1.0f de tolerância
+
+                if (player.previousHitbox.y + player.previousHitbox.height <= platforms[i].rect.y + 1.0f) 
                 {
-                    // Ajusta a posição Y do jogador (base central) para o topo da plataforma
                     player.position.y = platforms[i].rect.y;
                     player.velocity.y = 0;
                     player.onGround = true;
                     player.currentPlatform = i;
-                    break; // Colidiu com uma plataforma, pode parar de verificar
+                    break; 
                 }
             }
         }
@@ -452,8 +449,7 @@ void UpdatePlayer()
         break;
     }
 
-    // Atualizar pontuação
-    float heightDifference = startYPosition - (player.hitbox.y); // Usar topo da hitbox
+    float heightDifference = startYPosition - (player.hitbox.y);
     if (heightDifference > score)
     {
         score = (int)heightDifference;
@@ -464,15 +460,12 @@ void UpdatePlayer()
         gameSpeed = 2.5f;
 }
 
-// Atualizar câmera
 void UpdateGameCamera()
 {
-    // A câmera segue o ponto central superior do jogador (ou um pouco acima dele)
+    
     camera.target.x = player.position.x;
-    camera.target.y = player.position.y - SCREEN_HEIGHT / 3.0f; // Ajuste para manter o jogador na parte inferior da tela
+    camera.target.y = player.position.y - SCREEN_HEIGHT / 3.0f; 
 
-    // Garante que a câmera não desça abaixo do ponto de início do jogo
-    // (startYPosition é a base do jogador na primeira plataforma)
     if (camera.target.y > startYPosition - SCREEN_HEIGHT / 2.0f + 50)
     {
         camera.target.y = startYPosition - SCREEN_HEIGHT / 2.0f + 50;
@@ -481,10 +474,9 @@ void UpdateGameCamera()
     camera.offset = (Vector2){SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f};
 }
 
-// Atualizar plataformas
+
 void UpdatePlatforms()
 {
-    // Remover plataformas abaixo da tela
     float bottomLimit = camera.target.y + SCREEN_HEIGHT / 2.0f + 100;
     for (int i = 0; i < MAX_PLATFORMS; i++)
     {
@@ -494,7 +486,6 @@ void UpdatePlatforms()
         }
     }
 
-    // Gerar novas plataformas
     float highestActivePlatformY = -INFINITY;
     for (int i = 0; i < MAX_PLATFORMS; i++)
     {
@@ -533,12 +524,8 @@ void UpdatePlatforms()
     }
 }
 
-// Verificar game over
 void CheckGameOver()
 {
-    // O jogador caiu abaixo da tela visível da câmera (considerando o offset da câmera)
-    // A player.position.y agora é a BASE do jogador.
-    // Então, se a base do jogador for maior que a base da câmera + um offset, é game over.
     if (player.position.y > camera.target.y + (SCREEN_HEIGHT / 2.0f) + 50)
     {
         gameState = GAME_OVER;
@@ -547,33 +534,19 @@ void CheckGameOver()
     }
 }
 
-// Desenhar background em paralaxe
 void DrawParallaxBackground(Texture2D texture, float parallaxFactor)
 {
     if (texture.id == 0)
         return;
 
-    // Calcula a posição Y do topo da viewport da câmera no mundo do jogo
     float cameraTopY = camera.target.y - SCREEN_HEIGHT / 2.0f;
-
-    // Aplica o fator de paralaxe a essa posição para obter a posição Y do fundo
-    // O fundo se move na mesma direção que a câmera, mas mais lentamente
     float bgY_unwrapped = cameraTopY * parallaxFactor;
-
-    // Usa fmod para fazer o fundo se repetir verticalmente
-    // O sinal negativo garante que o deslocamento é para cima quando a câmera sobe
     float offsetY = fmod(-bgY_unwrapped, texture.height);
-    // Ajusta para que offsetY seja sempre positivo e no intervalo [0, texture.height)
     if (offsetY > 0) offsetY -= texture.height;
 
-
-    // Desenha o fundo. Precisamos desenhar pelo menos 2 cópias verticalmente
-    // para garantir que a tela esteja sempre coberta e a repetição seja suave.
-    // O loop começa de uma posição 'y' que garante que a parte de cima da tela seja coberta
-    // e vai até a parte de baixo.
     for (int y = (int)(offsetY - texture.height); y < SCREEN_HEIGHT; y += texture.height)
     {
-        // Para o movimento horizontal, usamos a mesma lógica de paralaxe
+        
         float bgX_unwrapped = camera.target.x * parallaxFactor;
         float offsetX = fmod(-bgX_unwrapped, texture.width);
         if (offsetX > 0) offsetX -= texture.width;
@@ -581,14 +554,12 @@ void DrawParallaxBackground(Texture2D texture, float parallaxFactor)
         for (int x = (int)(offsetX - texture.width); x < SCREEN_WIDTH; x += texture.width)
         {
             DrawTexture(texture, x, y, WHITE);
-            // Opcional: Desenhe uma borda para depuração para ver onde as texturas estão sendo desenhadas
-            // DrawRectangleLines(x, y, texture.width, texture.height, RED);
+    
         }
     }
 }
 
 
-// Desenhar jogador com animação
 void DrawPlayer()
 {
     Animation *currentAnim = NULL;
@@ -629,8 +600,6 @@ void DrawPlayer()
         src.width = -(float)currentAnim->frameWidth;
     }
 
-    // A textura é desenhada com a origem na parte inferior-central,
-    // o que a alinha perfeitamente com a 'player.position' que representa a BASE CENTRAL do jogador.
     Rectangle dest = {
         player.position.x,
         player.position.y,
@@ -643,12 +612,8 @@ void DrawPlayer()
 
     DrawTexturePro(currentAnim->texture, src, dest, origin, 0.0f, WHITE);
 
-    // Desenha a hitbox para depuração
-    // Isso deve corresponder exatamente à área de colisão
-    // DrawRectangleLinesEx(player.hitbox, 1, RED);
 }
 
-// Desenhar plataformas com alinhamento correto
 void DrawPlatforms()
 {
     for (int i = 0; i < MAX_PLATFORMS; i++)
@@ -674,7 +639,6 @@ void DrawPlatforms()
     }
 }
 
-// Desenhar menu
 void DrawMenu()
 {
     if (menuBackgroundTexture.id != 0)
@@ -705,8 +669,6 @@ void DrawMenu()
         if (CheckCollisionPointRec(mousePos, btnRect))
         {
             gameState = PLAYING;
-            // É crucial que InitPlatforms seja chamada ANTES de InitPlayer
-            // para que player.position possa se basear na primeira plataforma.
             InitPlatforms();
             InitPlayer();
             score = 0;
@@ -724,7 +686,6 @@ void DrawMenu()
              SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT - 50, 20, WHITE);
 }
 
-// Desenhar game over
 void DrawGameOver()
 {
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLACK, 0.7f));
@@ -752,7 +713,6 @@ void DrawGameOver()
     DrawText("Pressione ENTER para voltar ao inicio", SCREEN_WIDTH / 2 - 220, SCREEN_HEIGHT - 60, 20, LIGHTGRAY);
 }
 
-// Desenhar HUD
 void DrawHUD()
 {
     DrawText(TextFormat("Plataformas: %d", score), 10, 10, 20, WHITE);
@@ -808,7 +768,7 @@ int main()
 
         case PLAYING:
             BeginMode2D(camera);
-            DrawParallaxBackground(gameBackgroundTexture, 0.2f); // Fator de paralaxe ajustado para 0.2
+            DrawParallaxBackground(gameBackgroundTexture, 0.2f); 
             DrawPlatforms();
             DrawPlayer();
             EndMode2D();
@@ -817,7 +777,7 @@ int main()
 
         case GAME_OVER:
             BeginMode2D(camera);
-            DrawParallaxBackground(gameBackgroundTexture, 0.2f); // Fator de paralaxe ajustado para 0.2
+            DrawParallaxBackground(gameBackgroundTexture, 0.2f); 
             DrawPlatforms();
             DrawPlayer();
             EndMode2D();
